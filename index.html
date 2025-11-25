@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Cassette Player with Waveform</title>
+    <title>3D Cassette Player - Professional Edition</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <style>
@@ -14,9 +14,22 @@
         }
 
         body {
-            font-family: 'Arial', sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
             overflow: hidden;
+            transition: background 0.5s ease;
+        }
+
+        body.theme-sunset {
+            background: linear-gradient(135deg, #2c1a3d 0%, #3d1f2c 100%);
+        }
+
+        body.theme-ocean {
+            background: linear-gradient(135deg, #1a2e3d 0%, #1f2c3d 100%);
+        }
+
+        body.theme-forest {
+            background: linear-gradient(135deg, #1a2e1f 0%, #1f2c1a 100%);
         }
 
         #container {
@@ -31,40 +44,85 @@
             display: block;
         }
 
+        .drop-zone {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 107, 107, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 9999;
+            backdrop-filter: blur(10px);
+        }
+
+        .drop-zone.active {
+            display: flex;
+        }
+
+        .drop-zone-content {
+            text-align: center;
+            color: white;
+            font-size: 48px;
+            font-weight: bold;
+            text-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+        }
+
         .controls-panel {
             position: fixed;
             top: 20px;
             left: 20px;
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.9);
             padding: 20px;
             border-radius: 15px;
             color: #fff;
-            min-width: 300px;
+            min-width: 320px;
+            max-width: 320px;
             backdrop-filter: blur(10px);
-            border: 2px solid rgba(255, 107, 107, 0.3);
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+            border: 2px solid rgba(255, 107, 107, 0.4);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
             z-index: 1000;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .controls-panel::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .controls-panel::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .controls-panel::-webkit-scrollbar-thumb {
+            background: rgba(255, 107, 107, 0.6);
+            border-radius: 4px;
         }
 
         .controls-panel h2 {
             margin-bottom: 15px;
             color: #ff6b6b;
-            font-size: 18px;
+            font-size: 20px;
             text-align: center;
-            letter-spacing: 2px;
+            letter-spacing: 3px;
+            text-shadow: 0 0 10px rgba(255, 107, 107, 0.5);
         }
 
         .control-group {
-            margin-bottom: 15px;
+            margin-bottom: 18px;
         }
 
         .control-group label {
             display: block;
             margin-bottom: 8px;
-            font-size: 13px;
+            font-size: 12px;
             color: #aaa;
             text-transform: uppercase;
-            letter-spacing: 1px;
+            letter-spacing: 1.5px;
+            font-weight: 600;
         }
 
         .file-input-wrapper {
@@ -77,18 +135,19 @@
             padding: 12px;
             background: linear-gradient(145deg, #ff6b6b, #ee5a52);
             color: #fff;
-            border-radius: 8px;
+            border-radius: 10px;
             cursor: pointer;
             text-align: center;
             font-size: 14px;
             transition: all 0.3s;
             font-weight: bold;
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
         }
 
         .file-input-label:hover {
             background: linear-gradient(145deg, #ff8787, #ff6b6b);
             transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.4);
+            box-shadow: 0 6px 16px rgba(255, 107, 107, 0.5);
         }
 
         #audioFile {
@@ -113,38 +172,77 @@
         }
 
         .control-btn {
-            padding: 10px 15px;
+            padding: 12px 16px;
             background: linear-gradient(145deg, #3a3a3a, #2a2a2a);
             color: #fff;
             border: none;
-            border-radius: 8px;
+            border-radius: 10px;
             cursor: pointer;
             font-size: 16px;
             transition: all 0.2s;
-            min-width: 45px;
+            min-width: 50px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
         }
 
         .control-btn:hover {
             background: linear-gradient(145deg, #4a4a4a, #3a3a3a);
             transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.5);
+        }
+
+        .control-btn:active {
+            transform: translateY(0);
         }
 
         .control-btn.active {
             background: linear-gradient(145deg, #ff6b6b, #ee5a52);
-            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.5);
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.6);
         }
 
         .time-display {
-            background: #1a3a1a;
-            padding: 10px;
-            border-radius: 8px;
+            background: #0a2a0a;
+            padding: 12px;
+            border-radius: 10px;
             text-align: center;
             font-family: 'Courier New', monospace;
             color: #00ff00;
-            font-size: 20px;
+            font-size: 22px;
+            margin-bottom: 10px;
+            text-shadow: 0 0 15px rgba(0, 255, 0, 0.7);
+            border: 2px solid #1a4a1a;
+            box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.5);
+        }
+
+        .progress-bar-container {
+            position: relative;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
             margin-bottom: 15px;
-            text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
-            border: 2px solid #2a2a2a;
+            cursor: pointer;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: linear-gradient(90deg, #ff6b6b, #ff8787);
+            border-radius: 4px;
+            width: 0%;
+            transition: width 0.1s linear;
+            position: relative;
+        }
+
+        .progress-bar::after {
+            content: '';
+            position: absolute;
+            right: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 14px;
+            height: 14px;
+            background: #fff;
+            border-radius: 50%;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
         }
 
         .volume-control {
@@ -153,42 +251,50 @@
 
         .volume-slider {
             width: 100%;
-            height: 6px;
+            height: 8px;
             -webkit-appearance: none;
             appearance: none;
             background: linear-gradient(to right, #ff6b6b 70%, #444 70%);
             border-radius: 5px;
             outline: none;
+            cursor: pointer;
         }
 
         .volume-slider::-webkit-slider-thumb {
             -webkit-appearance: none;
             appearance: none;
-            width: 18px;
-            height: 18px;
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
             background: #ff6b6b;
             cursor: pointer;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+            transition: all 0.2s;
+        }
+
+        .volume-slider::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+            box-shadow: 0 3px 12px rgba(255, 107, 107, 0.6);
         }
 
         .volume-slider::-moz-range-thumb {
-            width: 18px;
-            height: 18px;
+            width: 20px;
+            height: 20px;
             border-radius: 50%;
             background: #ff6b6b;
             cursor: pointer;
             border: none;
-            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
         }
 
-        .viz-toggle-group {
+        .viz-toggle-group, .theme-toggle-group {
             display: flex;
-            gap: 8px;
+            gap: 6px;
             margin-bottom: 15px;
+            flex-wrap: wrap;
         }
 
-        .viz-btn {
+        .viz-btn, .theme-btn {
             flex: 1;
             padding: 10px;
             background: linear-gradient(145deg, #3a3a3a, #2a2a2a);
@@ -196,43 +302,197 @@
             border: 2px solid #555;
             border-radius: 8px;
             cursor: pointer;
-            font-size: 12px;
+            font-size: 11px;
             transition: all 0.3s;
             text-align: center;
+            min-width: 60px;
         }
 
-        .viz-btn:hover {
+        .viz-btn:hover, .theme-btn:hover {
             background: linear-gradient(145deg, #4a4a4a, #3a3a3a);
             transform: translateY(-2px);
         }
 
-        .viz-btn.active {
+        .viz-btn.active, .theme-btn.active {
             background: linear-gradient(145deg, #ff6b6b, #ee5a52);
             border-color: #ff6b6b;
             box-shadow: 0 4px 12px rgba(255, 107, 107, 0.5);
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .checkbox-group input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            accent-color: #ff6b6b;
+        }
+
+        .checkbox-group label {
+            cursor: pointer;
+            font-size: 13px;
+            color: #ccc;
+            margin: 0;
+            text-transform: none;
+        }
+
+        .playlist {
+            max-height: 200px;
+            overflow-y: auto;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 8px;
+            padding: 8px;
+            margin-bottom: 15px;
+        }
+
+        .playlist::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .playlist::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+        }
+
+        .playlist::-webkit-scrollbar-thumb {
+            background: rgba(255, 107, 107, 0.6);
+            border-radius: 3px;
+        }
+
+        .playlist-item {
+            padding: 10px;
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 6px;
+            margin-bottom: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+            font-size: 12px;
+        }
+
+        .playlist-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            border-left-color: #ff6b6b;
+        }
+
+        .playlist-item.active {
+            background: rgba(255, 107, 107, 0.2);
+            border-left-color: #ff6b6b;
+        }
+
+        .playlist-item-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            color: #ddd;
+        }
+
+        .playlist-item-duration {
+            font-size: 10px;
+            color: #888;
+            margin-top: 4px;
         }
 
         .info-panel {
             position: fixed;
             bottom: 20px;
             left: 20px;
-            background: rgba(0, 0, 0, 0.85);
+            background: rgba(0, 0, 0, 0.9);
             padding: 15px;
             border-radius: 10px;
             color: #aaa;
-            font-size: 12px;
+            font-size: 11px;
             backdrop-filter: blur(10px);
-            border: 2px solid rgba(255, 107, 107, 0.3);
+            border: 2px solid rgba(255, 107, 107, 0.4);
+            max-width: 320px;
         }
 
         .info-panel p {
-            margin: 5px 0;
+            margin: 4px 0;
         }
 
         .status-display {
             color: #00ff00;
             font-weight: bold;
             text-transform: uppercase;
+        }
+
+        .keyboard-shortcuts {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .keyboard-shortcuts h4 {
+            font-size: 11px;
+            color: #ff6b6b;
+            margin-bottom: 6px;
+        }
+
+        .shortcut {
+            display: flex;
+            justify-content: space-between;
+            margin: 3px 0;
+        }
+
+        .key {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: monospace;
+            font-size: 10px;
+        }
+
+        .vu-meters {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-bottom: 15px;
+        }
+
+        .vu-meter {
+            flex: 1;
+            height: 80px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+            position: relative;
+            overflow: hidden;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .vu-meter-fill {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: linear-gradient(to top, #00ff00 0%, #ffff00 50%, #ff0000 100%);
+            transition: height 0.1s ease;
+            height: 0%;
+        }
+
+        .vu-meter-label {
+            position: absolute;
+            top: 5px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            font-size: 10px;
+            color: #fff;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+            font-weight: bold;
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 5px rgba(255, 107, 107, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(255, 107, 107, 0.8); }
+        }
+
+        .control-btn.active {
+            animation: glow 2s ease-in-out infinite;
         }
     </style>
 </head>
@@ -241,25 +501,47 @@
         <canvas id="canvas3d"></canvas>
     </div>
 
+    <div class="drop-zone" id="dropZone">
+        <div class="drop-zone-content">
+            <div>📁</div>
+            <div>Drop Audio Files Here</div>
+        </div>
+    </div>
+
     <div class="controls-panel">
         <h2>🎵 CASSETTE PLAYER</h2>
 
         <div class="file-input-wrapper">
             <label for="audioFile" class="file-input-label">
-                📁 LOAD AUDIO FILE
+                📁 LOAD AUDIO FILE(S)
             </label>
-            <input type="file" id="audioFile" accept="audio/*">
-            <div class="track-name" id="trackName">No file loaded</div>
+            <input type="file" id="audioFile" accept="audio/*" multiple>
+            <div class="track-name" id="trackName">No file loaded - or drag & drop files</div>
         </div>
 
         <div class="time-display" id="timeDisplay">00:00 / 00:00</div>
 
+        <div class="progress-bar-container" id="progressContainer">
+            <div class="progress-bar" id="progressBar"></div>
+        </div>
+
+        <div class="vu-meters">
+            <div class="vu-meter">
+                <div class="vu-meter-label">L</div>
+                <div class="vu-meter-fill" id="vuMeterLeft"></div>
+            </div>
+            <div class="vu-meter">
+                <div class="vu-meter-label">R</div>
+                <div class="vu-meter-fill" id="vuMeterRight"></div>
+            </div>
+        </div>
+
         <div class="button-row">
-            <button class="control-btn" id="prevBtn" title="Previous">⏮</button>
-            <button class="control-btn" id="playBtn" title="Play">▶</button>
-            <button class="control-btn" id="pauseBtn" title="Pause">⏸</button>
-            <button class="control-btn" id="stopBtn" title="Stop">⏹</button>
-            <button class="control-btn" id="nextBtn" title="Next">⏭</button>
+            <button class="control-btn" id="prevBtn" title="Previous (←)">⏮</button>
+            <button class="control-btn" id="playBtn" title="Play (Space)">▶</button>
+            <button class="control-btn" id="pauseBtn" title="Pause (Space)">⏸</button>
+            <button class="control-btn" id="stopBtn" title="Stop (S)">⏹</button>
+            <button class="control-btn" id="nextBtn" title="Next (→)">⏭</button>
         </div>
 
         <div class="control-group volume-control">
@@ -275,13 +557,47 @@
                 <button class="viz-btn" data-viz="off">Off</button>
             </div>
         </div>
+
+        <div class="checkbox-group">
+            <input type="checkbox" id="autoRotate">
+            <label for="autoRotate">Auto-Rotate Cassette</label>
+        </div>
+
+        <div class="control-group">
+            <label>🎨 THEME</label>
+            <div class="theme-toggle-group">
+                <button class="theme-btn active" data-theme="default">Night</button>
+                <button class="theme-btn" data-theme="sunset">Sunset</button>
+                <button class="theme-btn" data-theme="ocean">Ocean</button>
+                <button class="theme-btn" data-theme="forest">Forest</button>
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label>📝 PLAYLIST</label>
+            <div class="playlist" id="playlist">
+                <div style="text-align: center; color: #666; padding: 20px; font-size: 12px;">
+                    No tracks loaded
+                </div>
+            </div>
+        </div>
     </div>
 
     <div class="info-panel">
         <p>🖱️ <strong>Drag</strong> to rotate</p>
         <p>🖱️ <strong>Scroll</strong> to zoom</p>
-        <p>🖱️ <strong>Right-click drag</strong> to pan</p>
+        <p>🖱️ <strong>Right-click</strong> to pan</p>
         <p>Status: <span class="status-display" id="statusText">STOPPED</span></p>
+
+        <div class="keyboard-shortcuts">
+            <h4>⌨️ KEYBOARD SHORTCUTS</h4>
+            <div class="shortcut"><span>Play/Pause</span><span class="key">SPACE</span></div>
+            <div class="shortcut"><span>Stop</span><span class="key">S</span></div>
+            <div class="shortcut"><span>Previous</span><span class="key">←</span></div>
+            <div class="shortcut"><span>Next</span><span class="key">→</span></div>
+            <div class="shortcut"><span>Volume Up</span><span class="key">↑</span></div>
+            <div class="shortcut"><span>Volume Down</span><span class="key">↓</span></div>
+        </div>
     </div>
 
     <audio id="audioPlayer" crossorigin="anonymous"></audio>
@@ -290,15 +606,20 @@
         // Three.js scene setup
         let scene, camera, renderer, controls;
         let cassetteGroup;
-        let leftReel, rightReel;
+        let leftReel, rightReel, tapeMesh;
         let waveformMesh, frequencyBars = [];
+        let autoRotate = false;
 
         // Audio setup
         const audioPlayer = document.getElementById('audioPlayer');
         let audioContext, analyser, source, dataArray, bufferLength;
-        let timeDataArray; // For waveform
+        let timeDataArray;
+        let splitter, leftAnalyser, rightAnalyser;
+        let leftDataArray, rightDataArray;
         let isPlaying = false;
-        let vizMode = 'waveform'; // 'waveform', 'frequency', 'off'
+        let vizMode = 'waveform';
+        let playlist = [];
+        let currentTrackIndex = 0;
 
         // UI elements
         const audioFileInput = document.getElementById('audioFile');
@@ -312,24 +633,29 @@
         const trackName = document.getElementById('trackName');
         const statusText = document.getElementById('statusText');
         const vizBtns = document.querySelectorAll('.viz-btn');
+        const themeBtns = document.querySelectorAll('.theme-btn');
+        const autoRotateCheckbox = document.getElementById('autoRotate');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressBar = document.getElementById('progressBar');
+        const playlistElement = document.getElementById('playlist');
+        const vuMeterLeft = document.getElementById('vuMeterLeft');
+        const vuMeterRight = document.getElementById('vuMeterRight');
+        const dropZone = document.getElementById('dropZone');
 
         // Initialize Three.js
         function init() {
-            // Scene
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x1a1a2e);
-            scene.fog = new THREE.Fog(0x1a1a2e, 20, 50);
+            scene.fog = new THREE.Fog(0x1a1a2e, 30, 60);
 
-            // Camera
             camera = new THREE.PerspectiveCamera(
-                50,
+                45,
                 window.innerWidth / window.innerHeight,
                 0.1,
                 1000
             );
-            camera.position.set(0, 5, 15);
+            camera.position.set(0, 6, 18);
 
-            // Renderer
             const canvas = document.getElementById('canvas3d');
             renderer = new THREE.WebGLRenderer({
                 canvas: canvas,
@@ -337,216 +663,265 @@
                 alpha: true
             });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(window.devicePixelRatio);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.2;
 
-            // OrbitControls for mouse rotation
+            // OrbitControls
             controls = new THREE.OrbitControls(camera, renderer.domElement);
             controls.enableDamping = true;
             controls.dampingFactor = 0.05;
-            controls.minDistance = 8;
-            controls.maxDistance = 30;
+            controls.minDistance = 10;
+            controls.maxDistance = 35;
             controls.maxPolarAngle = Math.PI / 1.5;
+            controls.autoRotate = false;
+            controls.autoRotateSpeed = 1.0;
 
-            // Lights
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.4);
+            // Enhanced lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
             scene.add(ambientLight);
 
-            const mainLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            mainLight.position.set(5, 10, 7);
+            const mainLight = new THREE.DirectionalLight(0xffffff, 1.0);
+            mainLight.position.set(8, 15, 10);
             mainLight.castShadow = true;
             mainLight.shadow.mapSize.width = 2048;
             mainLight.shadow.mapSize.height = 2048;
+            mainLight.shadow.camera.near = 0.5;
+            mainLight.shadow.camera.far = 50;
+            mainLight.shadow.camera.left = -20;
+            mainLight.shadow.camera.right = 20;
+            mainLight.shadow.camera.top = 20;
+            mainLight.shadow.camera.bottom = -20;
             scene.add(mainLight);
 
-            const fillLight = new THREE.DirectionalLight(0x6b8cff, 0.3);
-            fillLight.position.set(-5, 3, -5);
+            const fillLight = new THREE.DirectionalLight(0x6b8cff, 0.4);
+            fillLight.position.set(-8, 5, -8);
             scene.add(fillLight);
 
-            const rimLight = new THREE.PointLight(0xff6b6b, 0.6, 20);
-            rimLight.position.set(0, 5, -8);
-            scene.add(rimLight);
+            const rimLight1 = new THREE.PointLight(0xff6b6b, 1.2, 30);
+            rimLight1.position.set(0, 8, -12);
+            scene.add(rimLight1);
 
-            // Create cassette player
+            const rimLight2 = new THREE.PointLight(0x6baaff, 0.8, 25);
+            rimLight2.position.set(-10, 5, 5);
+            scene.add(rimLight2);
+
+            // Ground plane
+            const groundGeometry = new THREE.PlaneGeometry(100, 100);
+            const groundMaterial = new THREE.ShadowMaterial({ opacity: 0.3 });
+            const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+            ground.rotation.x = -Math.PI / 2;
+            ground.position.y = -3;
+            ground.receiveShadow = true;
+            scene.add(ground);
+
             createCassettePlayer();
-
-            // Create visualization elements
             createVisualization();
 
-            // Handle window resize
             window.addEventListener('resize', onWindowResize, false);
-
-            // Start animation loop
             animate();
         }
 
         function createCassettePlayer() {
             cassetteGroup = new THREE.Group();
 
-            // Main body
+            // Main body with better materials
             const bodyGeometry = new THREE.BoxGeometry(8, 4, 3);
             const bodyMaterial = new THREE.MeshStandardMaterial({
                 color: 0x2a2a2a,
-                roughness: 0.4,
-                metalness: 0.6
+                roughness: 0.3,
+                metalness: 0.7,
+                envMapIntensity: 1.0
             });
             const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
             body.castShadow = true;
             body.receiveShadow = true;
             cassetteGroup.add(body);
 
-            // Front panel
+            // Front panel with brushed metal effect
             const frontPanelGeometry = new THREE.BoxGeometry(7.8, 3.8, 0.2);
             const frontPanelMaterial = new THREE.MeshStandardMaterial({
                 color: 0x1a1a1a,
-                roughness: 0.6,
-                metalness: 0.3
+                roughness: 0.5,
+                metalness: 0.4
             });
             const frontPanel = new THREE.Mesh(frontPanelGeometry, frontPanelMaterial);
             frontPanel.position.z = 1.6;
+            frontPanel.castShadow = true;
             cassetteGroup.add(frontPanel);
 
-            // Cassette window (clear part)
-            const windowGeometry = new THREE.BoxGeometry(5, 1.8, 0.3);
+            // Cassette window (clear/glossy)
+            const windowGeometry = new THREE.BoxGeometry(5.5, 2.0, 0.3);
             const windowMaterial = new THREE.MeshPhysicalMaterial({
-                color: 0x333333,
+                color: 0x444444,
                 transparent: true,
-                opacity: 0.3,
-                roughness: 0.1,
+                opacity: 0.4,
+                roughness: 0.05,
                 metalness: 0.9,
-                clearcoat: 1.0
+                clearcoat: 1.0,
+                clearcoatRoughness: 0.1,
+                transmission: 0.2
             });
             const cassetteWindow = new THREE.Mesh(windowGeometry, windowMaterial);
-            cassetteWindow.position.set(0, 1, 1.7);
+            cassetteWindow.position.set(0, 1.1, 1.75);
             cassetteGroup.add(cassetteWindow);
 
-            // Cassette reels
-            const reelGeometry = new THREE.CylinderGeometry(0.6, 0.6, 0.3, 32);
+            // Cassette reels with spokes
+            const reelGeometry = new THREE.CylinderGeometry(0.7, 0.7, 0.4, 32);
             const reelMaterial = new THREE.MeshStandardMaterial({
                 color: 0x1a1a1a,
-                roughness: 0.5,
-                metalness: 0.7
+                roughness: 0.4,
+                metalness: 0.8
             });
 
             leftReel = new THREE.Mesh(reelGeometry, reelMaterial);
             leftReel.rotation.x = Math.PI / 2;
-            leftReel.position.set(-1.5, 1, 1.8);
+            leftReel.position.set(-1.8, 1.1, 1.85);
+            leftReel.castShadow = true;
             cassetteGroup.add(leftReel);
 
             rightReel = new THREE.Mesh(reelGeometry, reelMaterial);
             rightReel.rotation.x = Math.PI / 2;
-            rightReel.position.set(1.5, 1, 1.8);
+            rightReel.position.set(1.8, 1.1, 1.85);
+            rightReel.castShadow = true;
             cassetteGroup.add(rightReel);
 
-            // Display screen
-            const displayGeometry = new THREE.BoxGeometry(4, 0.8, 0.15);
+            // Tape between reels
+            const tapeGeometry = new THREE.PlaneGeometry(3.6, 0.4);
+            const tapeMaterial = new THREE.MeshStandardMaterial({
+                color: 0x3a2a1a,
+                roughness: 0.8,
+                metalness: 0.1,
+                side: THREE.DoubleSide
+            });
+            tapeMesh = new THREE.Mesh(tapeGeometry, tapeMaterial);
+            tapeMesh.position.set(0, 0.9, 1.9);
+            cassetteGroup.add(tapeMesh);
+
+            // Display screen with glow
+            const displayGeometry = new THREE.BoxGeometry(4.5, 1.0, 0.15);
             const displayMaterial = new THREE.MeshStandardMaterial({
                 color: 0x0a3a0a,
                 emissive: 0x00ff00,
-                emissiveIntensity: 0.3,
-                roughness: 0.7
+                emissiveIntensity: 0.5,
+                roughness: 0.6
             });
             const display = new THREE.Mesh(displayGeometry, displayMaterial);
-            display.position.set(0, -0.3, 1.7);
+            display.position.set(0, -0.2, 1.75);
             cassetteGroup.add(display);
 
-            // Control buttons
-            const buttonRadius = 0.25;
+            // Control buttons (more detailed)
+            const buttonRadius = 0.28;
             const buttonPositions = [
-                { x: -2, y: -1.2, label: 'prev' },
-                { x: -1, y: -1.2, label: 'play' },
-                { x: 0, y: -1.2, label: 'pause' },
-                { x: 1, y: -1.2, label: 'stop' },
-                { x: 2, y: -1.2, label: 'next' }
+                { x: -2.2, y: -1.3 },
+                { x: -1.1, y: -1.3 },
+                { x: 0, y: -1.3 },
+                { x: 1.1, y: -1.3 },
+                { x: 2.2, y: -1.3 }
             ];
 
             buttonPositions.forEach(pos => {
-                const buttonGeometry = new THREE.CylinderGeometry(buttonRadius, buttonRadius, 0.2, 32);
+                const buttonGeometry = new THREE.CylinderGeometry(buttonRadius, buttonRadius, 0.25, 32);
                 const buttonMaterial = new THREE.MeshStandardMaterial({
                     color: 0x3a3a3a,
-                    roughness: 0.3,
-                    metalness: 0.8
+                    roughness: 0.2,
+                    metalness: 0.9,
+                    emissive: 0x1a1a1a,
+                    emissiveIntensity: 0.2
                 });
                 const button = new THREE.Mesh(buttonGeometry, buttonMaterial);
                 button.rotation.x = Math.PI / 2;
-                button.position.set(pos.x, pos.y, 1.7);
+                button.position.set(pos.x, pos.y, 1.75);
+                button.castShadow = true;
                 cassetteGroup.add(button);
             });
 
-            // Back panel with headphone jacks
+            // Back panel
             const backPanelGeometry = new THREE.BoxGeometry(7.8, 3.8, 0.2);
             const backPanelMaterial = new THREE.MeshStandardMaterial({
                 color: 0x2a2a2a,
-                roughness: 0.6,
-                metalness: 0.4
-            });
-            const backPanel = new THREE.Mesh(backPanelGeometry, backPanelMaterial);
-            backPanel.position.z = -1.6;
-            cassetteGroup.add(backPanel);
-
-            // Headphone jack
-            const jackGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.4, 16);
-            const jackMaterial = new THREE.MeshStandardMaterial({
-                color: 0x1a1a1a,
-                roughness: 0.3,
-                metalness: 0.9
-            });
-            const headphoneJack = new THREE.Mesh(jackGeometry, jackMaterial);
-            headphoneJack.rotation.x = Math.PI / 2;
-            headphoneJack.position.set(-2, 0.5, -1.8);
-            cassetteGroup.add(headphoneJack);
-
-            // AUX input jack
-            const auxJack = new THREE.Mesh(jackGeometry, jackMaterial);
-            auxJack.rotation.x = Math.PI / 2;
-            auxJack.position.set(-2, -0.5, -1.8);
-            cassetteGroup.add(auxJack);
-
-            // Power jack
-            const powerJackGeometry = new THREE.CylinderGeometry(0.2, 0.2, 0.3, 16);
-            const powerJack = new THREE.Mesh(powerJackGeometry, jackMaterial);
-            powerJack.rotation.x = Math.PI / 2;
-            powerJack.position.set(2, 0, -1.8);
-            cassetteGroup.add(powerJack);
-
-            // Volume knobs on back
-            const knobGeometry = new THREE.CylinderGeometry(0.3, 0.25, 0.3, 16);
-            const knobMaterial = new THREE.MeshStandardMaterial({
-                color: 0x4a4a4a,
-                roughness: 0.4,
-                metalness: 0.7
-            });
-
-            const volumeKnob = new THREE.Mesh(knobGeometry, knobMaterial);
-            volumeKnob.rotation.x = Math.PI / 2;
-            volumeKnob.position.set(0, 0.8, -1.8);
-            cassetteGroup.add(volumeKnob);
-
-            const bassKnob = new THREE.Mesh(knobGeometry, knobMaterial);
-            bassKnob.rotation.x = Math.PI / 2;
-            bassKnob.position.set(1, 0.8, -1.8);
-            cassetteGroup.add(bassKnob);
-
-            const trebleKnob = new THREE.Mesh(knobGeometry, knobMaterial);
-            trebleKnob.rotation.x = Math.PI / 2;
-            trebleKnob.position.set(-1, 0.8, -1.8);
-            cassetteGroup.add(trebleKnob);
-
-            // Speaker grills on sides
-            createSpeakerGrill(-4.1, 0, 0, Math.PI / 2);
-            createSpeakerGrill(4.1, 0, 0, -Math.PI / 2);
-
-            // Top edge details
-            const topEdgeGeometry = new THREE.BoxGeometry(7.5, 0.1, 2.8);
-            const topEdgeMaterial = new THREE.MeshStandardMaterial({
-                color: 0x3a3a3a,
                 roughness: 0.5,
                 metalness: 0.5
             });
+            const backPanel = new THREE.Mesh(backPanelGeometry, backPanelMaterial);
+            backPanel.position.z = -1.6;
+            backPanel.castShadow = true;
+            cassetteGroup.add(backPanel);
+
+            // Headphone jack
+            const jackGeometry = new THREE.CylinderGeometry(0.18, 0.18, 0.5, 16);
+            const jackMaterial = new THREE.MeshStandardMaterial({
+                color: 0x0a0a0a,
+                roughness: 0.2,
+                metalness: 0.95
+            });
+
+            const headphoneJack = new THREE.Mesh(jackGeometry, jackMaterial);
+            headphoneJack.rotation.x = Math.PI / 2;
+            headphoneJack.position.set(-2.2, 0.6, -1.85);
+            headphoneJack.castShadow = true;
+            cassetteGroup.add(headphoneJack);
+
+            const auxJack = new THREE.Mesh(jackGeometry, jackMaterial);
+            auxJack.rotation.x = Math.PI / 2;
+            auxJack.position.set(-2.2, -0.4, -1.85);
+            auxJack.castShadow = true;
+            cassetteGroup.add(auxJack);
+
+            const powerJackGeometry = new THREE.CylinderGeometry(0.22, 0.22, 0.4, 16);
+            const powerJack = new THREE.Mesh(powerJackGeometry, jackMaterial);
+            powerJack.rotation.x = Math.PI / 2;
+            powerJack.position.set(2.2, 0, -1.85);
+            powerJack.castShadow = true;
+            cassetteGroup.add(powerJack);
+
+            // Knobs on back
+            const knobGeometry = new THREE.CylinderGeometry(0.35, 0.28, 0.35, 32);
+            const knobMaterial = new THREE.MeshStandardMaterial({
+                color: 0x4a4a4a,
+                roughness: 0.3,
+                metalness: 0.8
+            });
+
+            [-1, 0, 1].forEach((offset, i) => {
+                const knob = new THREE.Mesh(knobGeometry, knobMaterial);
+                knob.rotation.x = Math.PI / 2;
+                knob.position.set(offset * 1.1, 1, -1.85);
+                knob.castShadow = true;
+                cassetteGroup.add(knob);
+            });
+
+            // Speaker grills
+            createSpeakerGrill(-4.15, 0, 0, Math.PI / 2);
+            createSpeakerGrill(4.15, 0, 0, -Math.PI / 2);
+
+            // Top details
+            const topEdgeGeometry = new THREE.BoxGeometry(7.7, 0.15, 2.9);
+            const topEdgeMaterial = new THREE.MeshStandardMaterial({
+                color: 0x3a3a3a,
+                roughness: 0.4,
+                metalness: 0.6
+            });
             const topEdge = new THREE.Mesh(topEdgeGeometry, topEdgeMaterial);
-            topEdge.position.y = 2.05;
+            topEdge.position.y = 2.075;
+            topEdge.castShadow = true;
             cassetteGroup.add(topEdge);
+
+            // Brand label on top
+            const labelGeometry = new THREE.PlaneGeometry(3, 0.8);
+            const labelMaterial = new THREE.MeshStandardMaterial({
+                color: 0xff6b6b,
+                roughness: 0.7,
+                metalness: 0.1,
+                emissive: 0xff6b6b,
+                emissiveIntensity: 0.2
+            });
+            const brandLabel = new THREE.Mesh(labelGeometry, labelMaterial);
+            brandLabel.rotation.x = -Math.PI / 2;
+            brandLabel.position.set(0, 2.16, 0.3);
+            cassetteGroup.add(brandLabel);
 
             scene.add(cassetteGroup);
         }
@@ -554,25 +929,27 @@
         function createSpeakerGrill(x, y, z, rotationY) {
             const grillGroup = new THREE.Group();
 
-            const grillBackGeometry = new THREE.BoxGeometry(0.2, 2.5, 2);
+            const grillBackGeometry = new THREE.BoxGeometry(0.25, 2.8, 2.2);
             const grillBackMaterial = new THREE.MeshStandardMaterial({
                 color: 0x1a1a1a,
-                roughness: 0.7
+                roughness: 0.7,
+                metalness: 0.3
             });
             const grillBack = new THREE.Mesh(grillBackGeometry, grillBackMaterial);
+            grillBack.castShadow = true;
             grillGroup.add(grillBack);
 
-            // Add speaker holes
-            const holeGeometry = new THREE.CircleGeometry(0.08, 16);
+            const holeGeometry = new THREE.CircleGeometry(0.09, 16);
             const holeMaterial = new THREE.MeshStandardMaterial({
                 color: 0x0a0a0a,
-                side: THREE.DoubleSide
+                side: THREE.DoubleSide,
+                roughness: 0.9
             });
 
-            for (let row = -5; row <= 5; row++) {
-                for (let col = -3; col <= 3; col++) {
+            for (let row = -6; row <= 6; row++) {
+                for (let col = -4; col <= 4; col++) {
                     const hole = new THREE.Mesh(holeGeometry, holeMaterial);
-                    hole.position.set(0.11, row * 0.22, col * 0.28);
+                    hole.position.set(0.13, row * 0.21, col * 0.24);
                     grillGroup.add(hole);
                 }
             }
@@ -583,21 +960,21 @@
         }
 
         function createVisualization() {
-            // Waveform visualization
+            // Waveform
             const waveformGeometry = new THREE.BufferGeometry();
             const waveformPositions = new Float32Array(256 * 3);
 
             for (let i = 0; i < 256; i++) {
-                waveformPositions[i * 3] = (i - 128) * 0.06;
+                waveformPositions[i * 3] = (i - 128) * 0.08;
                 waveformPositions[i * 3 + 1] = 0;
-                waveformPositions[i * 3 + 2] = 5;
+                waveformPositions[i * 3 + 2] = 8;
             }
 
             waveformGeometry.setAttribute('position', new THREE.BufferAttribute(waveformPositions, 3));
 
             const waveformMaterial = new THREE.LineBasicMaterial({
                 color: 0x00ff00,
-                linewidth: 2
+                linewidth: 3
             });
 
             waveformMesh = new THREE.Line(waveformGeometry, waveformMaterial);
@@ -606,43 +983,55 @@
 
             // Frequency bars
             const barCount = 64;
-            const barWidth = 0.3;
-            const barSpacing = 0.5;
+            const barWidth = 0.35;
+            const barSpacing = 0.6;
             const startX = -(barCount * barSpacing) / 2;
 
             for (let i = 0; i < barCount; i++) {
                 const barGeometry = new THREE.BoxGeometry(barWidth, 0.5, barWidth);
                 const hue = i / barCount;
                 const barMaterial = new THREE.MeshStandardMaterial({
-                    color: new THREE.Color().setHSL(hue, 1, 0.5),
-                    emissive: new THREE.Color().setHSL(hue, 1, 0.3),
-                    roughness: 0.4,
-                    metalness: 0.6
+                    color: new THREE.Color().setHSL(hue, 1, 0.6),
+                    emissive: new THREE.Color().setHSL(hue, 1, 0.4),
+                    roughness: 0.3,
+                    metalness: 0.7
                 });
                 const bar = new THREE.Mesh(barGeometry, barMaterial);
                 bar.position.x = startX + i * barSpacing;
                 bar.position.y = -3;
-                bar.position.z = 3;
+                bar.position.z = 5;
                 bar.visible = false;
+                bar.castShadow = true;
                 scene.add(bar);
                 frequencyBars.push(bar);
             }
         }
 
-        // Initialize audio context
         function initAudioContext() {
             if (!audioContext) {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 analyser = audioContext.createAnalyser();
-                analyser.fftSize = 512;
+                analyser.fftSize = 1024;
                 bufferLength = analyser.frequencyBinCount;
                 dataArray = new Uint8Array(bufferLength);
                 timeDataArray = new Uint8Array(analyser.fftSize);
+
+                // Split for stereo VU meters
+                splitter = audioContext.createChannelSplitter(2);
+                leftAnalyser = audioContext.createAnalyser();
+                rightAnalyser = audioContext.createAnalyser();
+                leftAnalyser.fftSize = 256;
+                rightAnalyser.fftSize = 256;
+                leftDataArray = new Uint8Array(leftAnalyser.frequencyBinCount);
+                rightDataArray = new Uint8Array(rightAnalyser.frequencyBinCount);
 
                 if (audioPlayer.src && !source) {
                     try {
                         source = audioContext.createMediaElementSource(audioPlayer);
                         source.connect(analyser);
+                        source.connect(splitter);
+                        splitter.connect(leftAnalyser, 0);
+                        splitter.connect(rightAnalyser, 1);
                         analyser.connect(audioContext.destination);
                     } catch (e) {
                         console.log('Audio source already connected');
@@ -651,9 +1040,20 @@
             }
         }
 
-        // Update visualization
         function updateVisualization() {
             if (!analyser || !isPlaying) return;
+
+            // VU meters
+            if (leftAnalyser && rightAnalyser) {
+                leftAnalyser.getByteFrequencyData(leftDataArray);
+                rightAnalyser.getByteFrequencyData(rightDataArray);
+
+                const leftLevel = leftDataArray.reduce((a, b) => a + b) / leftDataArray.length / 255 * 100;
+                const rightLevel = rightDataArray.reduce((a, b) => a + b) / rightDataArray.length / 255 * 100;
+
+                vuMeterLeft.style.height = leftLevel + '%';
+                vuMeterRight.style.height = rightLevel + '%';
+            }
 
             if (vizMode === 'waveform') {
                 analyser.getByteTimeDomainData(timeDataArray);
@@ -661,7 +1061,7 @@
 
                 for (let i = 0; i < 256; i++) {
                     const dataIndex = Math.floor(i * timeDataArray.length / 256);
-                    const value = (timeDataArray[dataIndex] / 128.0 - 1.0) * 3;
+                    const value = (timeDataArray[dataIndex] / 128.0 - 1.0) * 4;
                     positions[i * 3 + 1] = value;
                 }
 
@@ -673,23 +1073,33 @@
                     const dataIndex = Math.floor(i * bufferLength / frequencyBars.length);
                     const value = dataArray[dataIndex] / 255;
 
-                    frequencyBars[i].scale.y = 0.5 + value * 10;
+                    frequencyBars[i].scale.y = 0.5 + value * 12;
                     frequencyBars[i].position.y = -3 + (frequencyBars[i].scale.y * 0.25);
 
-                    const hue = (i / frequencyBars.length) * 0.3 + (value * 0.2);
-                    frequencyBars[i].material.emissiveIntensity = value * 0.8;
+                    const hue = (i / frequencyBars.length) * 0.35 + (value * 0.15);
+                    frequencyBars[i].material.emissiveIntensity = value * 1.0;
                 }
             }
         }
 
-        // Animation loop
         function animate() {
             requestAnimationFrame(animate);
 
-            // Rotate reels when playing
             if (isPlaying) {
-                leftReel.rotation.z += 0.05;
-                rightReel.rotation.z += 0.05;
+                const speed = 0.08;
+                leftReel.rotation.z += speed;
+                rightReel.rotation.z += speed;
+
+                // Tape animation
+                if (tapeMesh) {
+                    tapeMesh.position.y = 0.9 + Math.sin(Date.now() * 0.01) * 0.02;
+                }
+            }
+
+            if (autoRotate) {
+                controls.autoRotate = true;
+            } else {
+                controls.autoRotate = false;
             }
 
             updateVisualization();
@@ -697,14 +1107,12 @@
             renderer.render(scene, camera);
         }
 
-        // Window resize handler
         function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        // Time formatting
         function formatTime(seconds) {
             if (isNaN(seconds)) return '00:00';
             const mins = Math.floor(seconds / 60);
@@ -712,23 +1120,60 @@
             return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
         }
 
-        // Event Listeners
-        audioFileInput.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                const url = URL.createObjectURL(file);
-                audioPlayer.src = url;
-                trackName.textContent = file.name;
-                statusText.textContent = 'READY';
+        function loadFiles(files) {
+            playlist = [];
+            playlistElement.innerHTML = '';
 
-                source = null;
-                if (audioContext) {
-                    initAudioContext();
-                }
+            Array.from(files).forEach((file, index) => {
+                const track = {
+                    name: file.name,
+                    url: URL.createObjectURL(file),
+                    file: file
+                };
+                playlist.push(track);
+
+                const item = document.createElement('div');
+                item.className = 'playlist-item';
+                item.innerHTML = `
+                    <div class="playlist-item-name">${track.name}</div>
+                    <div class="playlist-item-duration">Ready</div>
+                `;
+                item.addEventListener('click', () => loadTrack(index));
+                playlistElement.appendChild(item);
+            });
+
+            if (playlist.length > 0) {
+                loadTrack(0);
             }
-        });
+        }
 
-        playBtn.addEventListener('click', () => {
+        function loadTrack(index) {
+            if (index < 0 || index >= playlist.length) return;
+
+            currentTrackIndex = index;
+            const track = playlist[index];
+
+            audioPlayer.src = track.url;
+            trackName.textContent = track.name;
+            statusText.textContent = 'READY';
+
+            // Update playlist UI
+            document.querySelectorAll('.playlist-item').forEach((item, i) => {
+                item.classList.toggle('active', i === index);
+            });
+
+            source = null;
+            if (audioContext) {
+                initAudioContext();
+            }
+
+            // Auto-play if was playing
+            if (isPlaying) {
+                setTimeout(() => playBtn.click(), 100);
+            }
+        }
+
+        function playTrack() {
             if (audioPlayer.src) {
                 if (!audioContext) {
                     initAudioContext();
@@ -745,7 +1190,16 @@
                 stopBtn.classList.remove('active');
                 statusText.textContent = 'PLAYING';
             }
+        }
+
+        // Event Listeners
+        audioFileInput.addEventListener('change', function(e) {
+            if (e.target.files.length > 0) {
+                loadFiles(e.target.files);
+            }
         });
+
+        playBtn.addEventListener('click', playTrack);
 
         pauseBtn.addEventListener('click', () => {
             audioPlayer.pause();
@@ -763,56 +1217,196 @@
             pauseBtn.classList.remove('active');
             stopBtn.classList.add('active');
             statusText.textContent = 'STOPPED';
-            timeDisplay.textContent = '00:00 / ' + formatTime(audioPlayer.duration);
+            progressBar.style.width = '0%';
+            vuMeterLeft.style.height = '0%';
+            vuMeterRight.style.height = '0%';
         });
 
         prevBtn.addEventListener('click', () => {
-            audioPlayer.currentTime = Math.max(0, audioPlayer.currentTime - 10);
+            if (playlist.length > 0) {
+                currentTrackIndex = (currentTrackIndex - 1 + playlist.length) % playlist.length;
+                loadTrack(currentTrackIndex);
+            } else {
+                audioPlayer.currentTime = Math.max(0, audioPlayer.currentTime - 10);
+            }
         });
 
         nextBtn.addEventListener('click', () => {
-            audioPlayer.currentTime = Math.min(audioPlayer.duration, audioPlayer.currentTime + 10);
+            if (playlist.length > 0) {
+                currentTrackIndex = (currentTrackIndex + 1) % playlist.length;
+                loadTrack(currentTrackIndex);
+            } else {
+                audioPlayer.currentTime = Math.min(audioPlayer.duration, audioPlayer.currentTime + 10);
+            }
         });
 
         volumeSlider.addEventListener('input', (e) => {
             const volume = e.target.value;
             audioPlayer.volume = volume / 100;
-            const percentage = volume;
-            e.target.style.background = `linear-gradient(to right, #ff6b6b ${percentage}%, #444 ${percentage}%)`;
+            e.target.style.background = `linear-gradient(to right, #ff6b6b ${volume}%, #444 ${volume}%)`;
+            localStorage.setItem('volume', volume);
+        });
+
+        progressContainer.addEventListener('click', (e) => {
+            const rect = progressContainer.getBoundingClientRect();
+            const percent = (e.clientX - rect.left) / rect.width;
+            audioPlayer.currentTime = percent * audioPlayer.duration;
         });
 
         audioPlayer.addEventListener('timeupdate', () => {
             timeDisplay.textContent = formatTime(audioPlayer.currentTime) + ' / ' + formatTime(audioPlayer.duration);
+            const percent = (audioPlayer.currentTime / audioPlayer.duration) * 100 || 0;
+            progressBar.style.width = percent + '%';
         });
 
         audioPlayer.addEventListener('ended', () => {
-            isPlaying = false;
-            playBtn.classList.remove('active');
-            stopBtn.classList.add('active');
-            statusText.textContent = 'STOPPED';
+            if (playlist.length > 0) {
+                nextBtn.click();
+            } else {
+                isPlaying = false;
+                playBtn.classList.remove('active');
+                stopBtn.classList.add('active');
+                statusText.textContent = 'STOPPED';
+            }
         });
 
-        // Visualization mode switching
+        // Visualization mode
         vizBtns.forEach(btn => {
             btn.addEventListener('click', () => {
                 vizBtns.forEach(b => b.classList.remove('active'));
                 btn.classList.add('active');
 
-                const newMode = btn.dataset.viz;
-                vizMode = newMode;
+                vizMode = btn.dataset.viz;
+                waveformMesh.visible = (vizMode === 'waveform');
+                frequencyBars.forEach(bar => bar.visible = (vizMode === 'frequency'));
 
-                // Toggle visibility
-                waveformMesh.visible = (newMode === 'waveform');
-                frequencyBars.forEach(bar => bar.visible = (newMode === 'frequency'));
+                localStorage.setItem('vizMode', vizMode);
             });
         });
+
+        // Theme switcher
+        themeBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                themeBtns.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+
+                const theme = btn.dataset.theme;
+                document.body.className = theme !== 'default' ? `theme-${theme}` : '';
+
+                localStorage.setItem('theme', theme);
+            });
+        });
+
+        // Auto-rotate
+        autoRotateCheckbox.addEventListener('change', (e) => {
+            autoRotate = e.target.checked;
+            localStorage.setItem('autoRotate', autoRotate);
+        });
+
+        // Drag and drop
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        ['dragenter', 'dragover'].forEach(eventName => {
+            document.body.addEventListener(eventName, () => {
+                dropZone.classList.add('active');
+            }, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            document.body.addEventListener(eventName, () => {
+                dropZone.classList.remove('active');
+            }, false);
+        });
+
+        document.body.addEventListener('drop', (e) => {
+            const dt = e.dataTransfer;
+            const files = dt.files;
+            if (files.length > 0) {
+                loadFiles(files);
+            }
+        }, false);
+
+        // Keyboard shortcuts
+        document.addEventListener('keydown', (e) => {
+            // Ignore if typing in input
+            if (e.target.tagName === 'INPUT') return;
+
+            switch(e.code) {
+                case 'Space':
+                    e.preventDefault();
+                    if (isPlaying) {
+                        pauseBtn.click();
+                    } else {
+                        playBtn.click();
+                    }
+                    break;
+                case 'KeyS':
+                    stopBtn.click();
+                    break;
+                case 'ArrowLeft':
+                    prevBtn.click();
+                    break;
+                case 'ArrowRight':
+                    nextBtn.click();
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    volumeSlider.value = Math.min(100, parseInt(volumeSlider.value) + 5);
+                    volumeSlider.dispatchEvent(new Event('input'));
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    volumeSlider.value = Math.max(0, parseInt(volumeSlider.value) - 5);
+                    volumeSlider.dispatchEvent(new Event('input'));
+                    break;
+            }
+        });
+
+        // Load saved settings
+        const savedVolume = localStorage.getItem('volume');
+        if (savedVolume) {
+            volumeSlider.value = savedVolume;
+            audioPlayer.volume = savedVolume / 100;
+            volumeSlider.style.background = `linear-gradient(to right, #ff6b6b ${savedVolume}%, #444 ${savedVolume}%)`;
+        }
+
+        const savedVizMode = localStorage.getItem('vizMode');
+        if (savedVizMode) {
+            vizBtns.forEach(btn => {
+                if (btn.dataset.viz === savedVizMode) {
+                    btn.click();
+                }
+            });
+        }
+
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            themeBtns.forEach(btn => {
+                if (btn.dataset.theme === savedTheme) {
+                    btn.click();
+                }
+            });
+        }
+
+        const savedAutoRotate = localStorage.getItem('autoRotate');
+        if (savedAutoRotate === 'true') {
+            autoRotateCheckbox.checked = true;
+            autoRotate = true;
+        }
 
         // Set initial volume
         audioPlayer.volume = volumeSlider.value / 100;
         const initialVolume = volumeSlider.value;
         volumeSlider.style.background = `linear-gradient(to right, #ff6b6b ${initialVolume}%, #444 ${initialVolume}%)`;
 
-        // Initialize everything
+        // Initialize
         init();
     </script>
 </body>
