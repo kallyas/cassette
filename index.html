@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -19,6 +20,38 @@
             align-items: center;
             min-height: 100vh;
             padding: 20px;
+            perspective: 1500px;
+        }
+
+        .view-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            display: flex;
+            gap: 10px;
+            z-index: 1000;
+        }
+
+        .view-btn, .viz-btn {
+            padding: 10px 20px;
+            background: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            border: 2px solid #ff6b6b;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            transition: all 0.3s;
+            backdrop-filter: blur(10px);
+        }
+
+        .view-btn:hover, .viz-btn:hover {
+            background: rgba(255, 107, 107, 0.3);
+            transform: translateY(-2px);
+        }
+
+        .view-btn.active {
+            background: #ff6b6b;
+            box-shadow: 0 4px 12px rgba(255, 107, 107, 0.5);
         }
 
         .cassette-player {
@@ -29,6 +62,20 @@
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5),
                         inset 0 1px 0 rgba(255, 255, 255, 0.1);
             position: relative;
+            transition: transform 0.8s ease;
+            transform-style: preserve-3d;
+        }
+
+        .cassette-player.view-3d {
+            transform: rotateX(-15deg) rotateY(20deg);
+        }
+
+        .cassette-player.view-side {
+            transform: rotateY(90deg);
+        }
+
+        .cassette-player.view-top {
+            transform: rotateX(-80deg);
         }
 
         .brand {
@@ -267,6 +314,20 @@
             grid-template-columns: repeat(6, 1fr);
             gap: 5px;
             box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.8);
+            transition: transform 0.1s ease;
+        }
+
+        .speaker.pulsing {
+            animation: speakerPulse 0.15s ease-in-out;
+        }
+
+        @keyframes speakerPulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.02);
+            }
         }
 
         .speaker-hole {
@@ -275,6 +336,12 @@
             border-radius: 50%;
             background: #0a0a0a;
             box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.8);
+            transition: all 0.05s ease;
+        }
+
+        .speaker.pulsing .speaker-hole {
+            box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.8),
+                        0 0 5px rgba(255, 107, 107, 0.3);
         }
 
         .file-input-wrapper {
@@ -312,9 +379,43 @@
             text-overflow: ellipsis;
             white-space: nowrap;
         }
+
+        .visualizer-container {
+            background: #0a0a0a;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+            box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.8);
+            border: 2px solid #2a2a2a;
+            height: 150px;
+            display: none;
+        }
+
+        .visualizer-container.active {
+            display: block;
+        }
+
+        #visualizer {
+            width: 100%;
+            height: 100%;
+            border-radius: 5px;
+        }
+
+        .viz-btn.active {
+            background: #4CAF50;
+            border-color: #4CAF50;
+        }
     </style>
 </head>
 <body>
+    <div class="view-controls">
+        <button class="view-btn active" data-view="front">Front View</button>
+        <button class="view-btn" data-view="3d">3D View</button>
+        <button class="view-btn" data-view="top">Top View</button>
+        <button class="view-btn" data-view="side">Side View</button>
+        <button class="viz-btn" id="vizToggle">Enable Visualizer</button>
+    </div>
+
     <div class="cassette-player">
         <div class="brand">RETRO SOUND</div>
         
@@ -364,6 +465,10 @@
                 <span id="statusDisplay">STOP</span>
                 <span id="durationDisplay">--:--</span>
             </div>
+        </div>
+
+        <div class="visualizer-container" id="visualizerContainer">
+            <canvas id="visualizer"></canvas>
         </div>
 
         <div class="file-input-wrapper">
@@ -437,9 +542,186 @@
         const trackName = document.getElementById('trackName');
         const leftReel = document.getElementById('leftReel');
         const rightReel = document.getElementById('rightReel');
+        const cassettePlayer = document.querySelector('.cassette-player');
+        const viewButtons = document.querySelectorAll('.view-btn');
+        const vizToggle = document.getElementById('vizToggle');
+        const visualizerContainer = document.getElementById('visualizerContainer');
+        const visualizerCanvas = document.getElementById('visualizer');
+        const speakers = document.querySelectorAll('.speaker');
+
+        // Audio context and analyzer for visualization
+        let audioContext;
+        let analyser;
+        let dataArray;
+        let bufferLength;
+        let source;
+        let isVisualizerActive = false;
+        let animationId;
+        let speakerAnimationId;
 
         // Set initial volume
         audioPlayer.volume = volumeSlider.value / 100;
+
+        // View switching
+        viewButtons.forEach(btn => {
+            btn.addEventListener('click', () => {
+                viewButtons.forEach(b => b.classList.remove('active'));
+                btn.classList.add('active');
+                
+                const view = btn.dataset.view;
+                cassettePlayer.className = 'cassette-player';
+                
+                if (view === '3d') {
+                    cassettePlayer.classList.add('view-3d');
+                } else if (view === 'side') {
+                    cassettePlayer.classList.add('view-side');
+                } else if (view === 'top') {
+                    cassettePlayer.classList.add('view-top');
+                }
+            });
+        });
+
+        // Visualizer toggle
+        vizToggle.addEventListener('click', () => {
+            isVisualizerActive = !isVisualizerActive;
+            
+            if (isVisualizerActive) {
+                vizToggle.textContent = 'Disable Visualizer';
+                vizToggle.classList.add('active');
+                visualizerContainer.classList.add('active');
+                initAudioContext();
+                if (!audioPlayer.paused) {
+                    startVisualization();
+                }
+            } else {
+                vizToggle.textContent = 'Enable Visualizer';
+                vizToggle.classList.remove('active');
+                visualizerContainer.classList.remove('active');
+                stopVisualization();
+            }
+        });
+
+        // Initialize audio context
+        function initAudioContext() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+                bufferLength = analyser.frequencyBinCount;
+                dataArray = new Uint8Array(bufferLength);
+                
+                if (!source && audioPlayer.src) {
+                    source = audioContext.createMediaElementSource(audioPlayer);
+                    source.connect(analyser);
+                    analyser.connect(audioContext.destination);
+                }
+            }
+        }
+
+        // Animate speakers based on audio
+        function animateSpeakers() {
+            if (!audioPlayer.paused && audioPlayer.src) {
+                speakerAnimationId = requestAnimationFrame(animateSpeakers);
+                
+                // If audio context is initialized, use frequency data
+                if (analyser) {
+                    analyser.getByteFrequencyData(dataArray);
+                    
+                    // Calculate average bass frequency (lower frequencies)
+                    let bassSum = 0;
+                    const bassRange = Math.floor(bufferLength * 0.2); // First 20% for bass
+                    for (let i = 0; i < bassRange; i++) {
+                        bassSum += dataArray[i];
+                    }
+                    const bassAverage = bassSum / bassRange;
+                    
+                    // Trigger pulse animation when bass hits a threshold
+                    if (bassAverage > 100) {
+                        speakers.forEach(speaker => {
+                            speaker.classList.remove('pulsing');
+                            // Force reflow to restart animation
+                            void speaker.offsetWidth;
+                            speaker.classList.add('pulsing');
+                        });
+                    }
+                } else {
+                    // Fallback: pulse at regular intervals if no analyzer
+                    const currentTime = Date.now();
+                    if (currentTime % 500 < 50) {
+                        speakers.forEach(speaker => {
+                            speaker.classList.remove('pulsing');
+                            void speaker.offsetWidth;
+                            speaker.classList.add('pulsing');
+                        });
+                    }
+                }
+            }
+        }
+
+        // Stop speaker animation
+        function stopSpeakerAnimation() {
+            if (speakerAnimationId) {
+                cancelAnimationFrame(speakerAnimationId);
+                speakerAnimationId = null;
+            }
+            speakers.forEach(speaker => {
+                speaker.classList.remove('pulsing');
+            });
+        }
+
+        // Start visualization
+        function startVisualization() {
+            if (!isVisualizerActive) return;
+            
+            const canvas = visualizerCanvas;
+            const ctx = canvas.getContext('2d');
+            
+            // Set canvas size
+            canvas.width = canvas.offsetWidth;
+            canvas.height = canvas.offsetHeight;
+            
+            function draw() {
+                if (!isVisualizerActive) return;
+                
+                animationId = requestAnimationFrame(draw);
+                
+                analyser.getByteFrequencyData(dataArray);
+                
+                ctx.fillStyle = '#0a0a0a';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                const barWidth = (canvas.width / bufferLength) * 2.5;
+                let barHeight;
+                let x = 0;
+                
+                for (let i = 0; i < bufferLength; i++) {
+                    barHeight = (dataArray[i] / 255) * canvas.height * 0.8;
+                    
+                    const r = barHeight + 25 * (i / bufferLength);
+                    const g = 250 * (i / bufferLength);
+                    const b = 50;
+                    
+                    ctx.fillStyle = `rgb(${r}, ${g}, ${b})`;
+                    ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+                    
+                    x += barWidth + 1;
+                }
+            }
+            
+            draw();
+        }
+
+        // Stop visualization
+        function stopVisualization() {
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+            
+            const canvas = visualizerCanvas;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
 
         // File input handler
         audioFileInput.addEventListener('change', function(e) {
@@ -449,6 +731,12 @@
                 audioPlayer.src = url;
                 trackName.textContent = file.name;
                 statusDisplay.textContent = 'READY';
+                
+                // Reinitialize audio context with new source
+                if (isVisualizerActive && audioContext) {
+                    source = null;
+                    initAudioContext();
+                }
             }
         });
 
@@ -463,6 +751,14 @@
         // Play button
         playBtn.addEventListener('click', () => {
             if (audioPlayer.src) {
+                // Initialize audio context for speaker animation (always needed now)
+                if (!audioContext) {
+                    initAudioContext();
+                }
+                
+                if (audioContext && audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
                 audioPlayer.play();
                 playBtn.classList.add('active');
                 pauseBtn.classList.remove('active');
@@ -470,6 +766,13 @@
                 statusDisplay.textContent = 'PLAY';
                 leftReel.classList.add('rotating');
                 rightReel.classList.add('rotating');
+                
+                // Start speaker animation
+                animateSpeakers();
+                
+                if (isVisualizerActive) {
+                    startVisualization();
+                }
             }
         });
 
@@ -481,6 +784,8 @@
             statusDisplay.textContent = 'PAUSE';
             leftReel.classList.remove('rotating');
             rightReel.classList.remove('rotating');
+            stopSpeakerAnimation();
+            stopVisualization();
         });
 
         // Stop button
@@ -494,6 +799,8 @@
             timeDisplay.textContent = '00:00';
             leftReel.classList.remove('rotating');
             rightReel.classList.remove('rotating');
+            stopSpeakerAnimation();
+            stopVisualization();
         });
 
         // Previous button (rewind 10 seconds)
@@ -533,6 +840,8 @@
             statusDisplay.textContent = 'STOP';
             leftReel.classList.remove('rotating');
             rightReel.classList.remove('rotating');
+            stopSpeakerAnimation();
+            stopVisualization();
         });
 
         // Initialize volume slider gradient
